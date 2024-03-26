@@ -36,5 +36,7 @@ func main() {
 
 	app.Get("/ping", controllers.Ping)
 
+	app.Post("/signup", controllers.SignUp)
+
 	log.Fatalln(app.Listen(":" + config.Port))
 }
