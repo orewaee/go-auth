@@ -7,6 +7,7 @@ import (
 )
 
 var Port string
+var MongoUri string
 
 type env struct {
 	key      string
@@ -15,6 +16,7 @@ type env struct {
 
 var envs = []env{
 	{"PORT", &Port},
+	{"MONGO_URI", &MongoUri},
 }
 
 func loadEnv(env env) bool {

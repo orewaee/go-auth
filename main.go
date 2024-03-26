@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/orewaee/go-auth/config"
 	"github.com/orewaee/go-auth/controllers"
+	"github.com/orewaee/go-auth/database"
 	"log"
 )
 
@@ -14,7 +15,14 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	log.Println(config.Port)
+	if err := database.Load(); err != nil {
+		log.Fatalln(err)
+	}
+	defer func() {
+		if err := database.Unload(); err != nil {
+			panic(err)
+		}
+	}()
 
 	app := fiber.New()
 
