@@ -10,6 +10,11 @@ var Port string
 var MongoUri string
 var AccessSecret string
 var RefreshSecret string
+var SmtpIdentity string
+var SmtpUsername string
+var SmtpPassword string
+var SmtpHost string
+var SmtpPort string
 
 type env struct {
 	key      string
@@ -21,6 +26,11 @@ var envs = []env{
 	{"MONGO_URI", &MongoUri},
 	{"ACCESS_SECRET", &AccessSecret},
 	{"REFRESH_SECRET", &RefreshSecret},
+	{"SMTP_IDENTITY", &SmtpIdentity},
+	{"SMTP_USERNAME", &SmtpUsername},
+	{"SMTP_PASSWORD", &SmtpPassword},
+	{"SMTP_HOST", &SmtpHost},
+	{"SMTP_PORT", &SmtpPort},
 }
 
 func loadEnv(env env) bool {

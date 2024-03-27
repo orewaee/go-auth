@@ -39,6 +39,7 @@ func main() {
 	app.Post("/signup", controllers.SignUp)
 	app.Post("/signin", controllers.SignIn)
 	app.Post("/refresh", controllers.Refresh)
+	app.Get("/activate/:secret", controllers.Activate)
 
 	log.Fatalln(app.Listen(":" + config.Port))
 }

@@ -41,6 +41,10 @@ func SignIn(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "User not found")
 	}
 
+	if !user.Activated {
+		return fiber.NewError(fiber.StatusMethodNotAllowed, "Account not activated")
+	}
+
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Wrong password")
