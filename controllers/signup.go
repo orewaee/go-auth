@@ -8,6 +8,7 @@ import (
 	"github.com/orewaee/go-auth/database"
 	"github.com/orewaee/go-auth/email"
 	"github.com/orewaee/go-auth/models"
+	"github.com/orewaee/go-auth/validation"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
@@ -16,14 +17,22 @@ import (
 )
 
 type SignUpBody struct {
-	Email    string `json:"email" validate:"required"`
+	Email    string `json:"email" validate:"required,email_regex"`
 	Name     string `json:"name" validate:"required"`
 	Password string `json:"password" validate:"required"`
+}
+
+func (body SignUpBody) Validate() error {
+	return validation.GetEmailValidate().Struct(body)
 }
 
 func SignUp(ctx *fiber.Ctx) error {
 	var body SignUpBody
 	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := body.Validate(); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 

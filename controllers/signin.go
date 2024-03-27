@@ -9,6 +9,7 @@ import (
 	"github.com/orewaee/go-auth/database"
 	"github.com/orewaee/go-auth/models"
 	"github.com/orewaee/go-auth/token"
+	"github.com/orewaee/go-auth/validation"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,8 +18,12 @@ import (
 )
 
 type SignInBody struct {
-	Email    string `json:"email" validate:"required"`
+	Email    string `json:"email" validate:"required,email_regex"`
 	Password string `json:"password" validate:"required"`
+}
+
+func (body SignInBody) Validate() error {
+	return validation.GetEmailValidate().Struct(body)
 }
 
 type TokenPair struct {
@@ -29,6 +34,10 @@ type TokenPair struct {
 func SignIn(ctx *fiber.Ctx) error {
 	var body SignInBody
 	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	if err := body.Validate(); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
