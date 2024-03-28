@@ -1,20 +1,6 @@
 package config
 
-import (
-	"errors"
-	"github.com/joho/godotenv"
-	"os"
-)
-
-var Port string
-var MongoUri string
-var AccessSecret string
-var RefreshSecret string
-var SmtpIdentity string
-var SmtpUsername string
-var SmtpPassword string
-var SmtpHost string
-var SmtpPort string
+import "os"
 
 type env struct {
 	key      string
@@ -38,20 +24,6 @@ func loadEnv(env env) bool {
 	if ok {
 		*env.variable = value
 	}
+
 	return ok
-}
-
-func Load() error {
-	err := godotenv.Load()
-	if err != nil {
-		return err
-	}
-
-	for _, env := range envs {
-		if !loadEnv(env) {
-			return errors.New(env.key + " does not exist")
-		}
-	}
-
-	return nil
 }
