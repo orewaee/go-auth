@@ -5,8 +5,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/orewaee/go-auth/config"
-	"github.com/orewaee/go-auth/controllers"
 	"github.com/orewaee/go-auth/database"
+	"github.com/orewaee/go-auth/handlers"
 	"log"
 )
 
@@ -34,12 +34,12 @@ func main() {
 
 	app.Use(logger.New())
 
-	app.Get("/ping", controllers.Ping)
+	app.Get("/ping", handlers.Ping)
 
-	app.Post("/signup", controllers.SignUp)
-	app.Post("/signin", controllers.SignIn)
-	app.Post("/refresh", controllers.Refresh)
-	app.Get("/activate/:secret", controllers.Activate)
+	app.Post("/signup", handlers.SignUp)
+	app.Post("/signin", handlers.SignIn)
+	app.Post("/refresh", handlers.Refresh)
+	app.Get("/activate/:secret", handlers.Activate)
 
 	log.Fatalln(app.Listen(":" + config.Port))
 }
