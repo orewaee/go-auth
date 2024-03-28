@@ -7,9 +7,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/orewaee/go-auth/config"
 	"github.com/orewaee/go-auth/database"
+	"github.com/orewaee/go-auth/dto"
 	"github.com/orewaee/go-auth/models"
 	"github.com/orewaee/go-auth/token"
-	"github.com/orewaee/go-auth/validation"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,28 +17,16 @@ import (
 	"time"
 )
 
-type SignInBody struct {
-	Email    string `json:"email" validate:"required,email_regex"`
-	Password string `json:"password" validate:"required"`
-}
-
-func (body SignInBody) Validate() error {
-	return validation.GetEmailValidate().Struct(body)
-}
-
-type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-}
-
 func SignIn(ctx *fiber.Ctx) error {
-	var body SignInBody
+	var body dto.SignInBody
 	if err := ctx.BodyParser(&body); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		ctx.Status(fiber.StatusBadRequest)
+		return ctx.JSON(dto.Error{Message: err.Error()})
 	}
 
 	if err := body.Validate(); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		ctx.Status(fiber.StatusBadRequest)
+		return ctx.JSON(dto.Error{Message: err.Error()})
 	}
 
 	users := database.GetCollection("users")
@@ -47,16 +35,19 @@ func SignIn(ctx *fiber.Ctx) error {
 	var user models.User
 	err := users.FindOne(context.TODO(), filter).Decode(&user)
 	if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
-		return fiber.NewError(fiber.StatusNotFound, "User not found")
+		ctx.Status(fiber.StatusNotFound)
+		return ctx.JSON(dto.Error{Message: "user not found"})
 	}
 
 	if !user.Activated {
-		return fiber.NewError(fiber.StatusMethodNotAllowed, "Account not activated")
+		ctx.Status(fiber.StatusMethodNotAllowed)
+		return ctx.JSON(dto.Error{Message: "account not activated"})
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
 	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "Wrong password")
+		ctx.Status(fiber.StatusUnauthorized)
+		return ctx.JSON(dto.Error{Message: "wrong password"})
 	}
 
 	accessToken := token.GenerateToken(jwt.MapClaims{
@@ -69,6 +60,8 @@ func SignIn(ctx *fiber.Ctx) error {
 		"exp": time.Now().Add(time.Minute * 60).Unix(),
 	}, config.RefreshSecret)
 
+	sessions := database.GetCollection("sessions")
+
 	newSession := models.Session{
 		Id:           primitive.NewObjectID(),
 		User:         user.Id,
@@ -77,11 +70,10 @@ func SignIn(ctx *fiber.Ctx) error {
 		CreatedAt:    time.Now(),
 	}
 
-	sessions := database.GetCollection("sessions")
-
 	_, err = sessions.InsertOne(context.TODO(), newSession)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		ctx.Status(fiber.StatusInternalServerError)
+		return ctx.JSON(dto.Error{Message: err.Error()})
 	}
 
 	cookie := &fiber.Cookie{
@@ -92,5 +84,5 @@ func SignIn(ctx *fiber.Ctx) error {
 	}
 
 	ctx.Cookie(cookie)
-	return ctx.JSON(TokenPair{accessToken, refreshToken})
+	return ctx.JSON(dto.TokenPair{AccessToken: accessToken, RefreshToken: refreshToken})
 }

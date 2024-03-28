@@ -6,9 +6,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/orewaee/go-auth/activation"
 	"github.com/orewaee/go-auth/database"
+	"github.com/orewaee/go-auth/dto"
 	"github.com/orewaee/go-auth/email"
 	"github.com/orewaee/go-auth/models"
-	"github.com/orewaee/go-auth/validation"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
@@ -16,24 +16,16 @@ import (
 	"time"
 )
 
-type SignUpBody struct {
-	Email    string `json:"email" validate:"required,email_regex"`
-	Name     string `json:"name" validate:"required"`
-	Password string `json:"password" validate:"required"`
-}
-
-func (body SignUpBody) Validate() error {
-	return validation.GetEmailValidate().Struct(body)
-}
-
 func SignUp(ctx *fiber.Ctx) error {
-	var body SignUpBody
+	var body dto.SignUpBody
 	if err := ctx.BodyParser(&body); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		ctx.Status(fiber.StatusBadRequest)
+		return ctx.JSON(dto.Error{Message: err.Error()})
 	}
 
 	if err := body.Validate(); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		ctx.Status(fiber.StatusBadRequest)
+		return ctx.JSON(dto.Error{Message: err.Error()})
 	}
 
 	users := database.GetCollection("users")
@@ -42,12 +34,14 @@ func SignUp(ctx *fiber.Ctx) error {
 	var user models.User
 	err := users.FindOne(context.TODO(), filter).Decode(&user)
 	if err == nil {
-		return fiber.NewError(fiber.StatusConflict, "User with this email already exists")
+		ctx.Status(fiber.StatusConflict)
+		return ctx.JSON(dto.Error{Message: "user with this email already exists"})
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 8)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error generating hash")
+		ctx.Status(fiber.StatusInternalServerError)
+		return ctx.JSON(dto.Error{Message: "hash generation error"})
 	}
 
 	newUser := models.User{
@@ -59,7 +53,8 @@ func SignUp(ctx *fiber.Ctx) error {
 	}
 
 	if _, err := users.InsertOne(context.TODO(), newUser); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		ctx.Status(fiber.StatusInternalServerError)
+		return ctx.JSON(dto.Error{Message: err.Error()})
 	}
 
 	go func() {
@@ -83,7 +78,8 @@ func SignUp(ctx *fiber.Ctx) error {
 	}
 
 	if _, err := activations.InsertOne(context.Background(), newActivation); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		ctx.Status(fiber.StatusInternalServerError)
+		return ctx.JSON(dto.Error{Message: err.Error()})
 	}
 
 	go func() {

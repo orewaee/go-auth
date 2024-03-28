@@ -7,6 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/orewaee/go-auth/config"
 	"github.com/orewaee/go-auth/database"
+	"github.com/orewaee/go-auth/dto"
 	"github.com/orewaee/go-auth/models"
 	"github.com/orewaee/go-auth/token"
 	"go.mongodb.org/mongo-driver/bson"
@@ -21,7 +22,8 @@ func Refresh(ctx *fiber.Ctx) error {
 	ctx.ClearCookie("refresh_token")
 
 	if !token.VerifyToken(refreshToken, config.RefreshSecret) {
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid refresh token")
+		ctx.Status(fiber.StatusUnauthorized)
+		return ctx.JSON(dto.Error{Message: "invalid refresh token"})
 	}
 
 	sessions := database.GetCollection("sessions")
@@ -30,13 +32,15 @@ func Refresh(ctx *fiber.Ctx) error {
 	var session models.Session
 	err := sessions.FindOne(context.TODO(), filter).Decode(&session)
 	if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
-		return fiber.NewError(fiber.StatusUnauthorized, "Session not found")
+		ctx.Status(fiber.StatusUnauthorized)
+		return ctx.JSON(dto.Error{Message: "session not found"})
 	}
 
 	filter = bson.D{{"_id", session.Id}}
 
 	if _, err := sessions.DeleteOne(context.TODO(), filter); err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, err.Error())
+		ctx.Status(fiber.StatusUnauthorized)
+		return ctx.JSON(dto.Error{Message: err.Error()})
 	}
 
 	newAccessToken := token.GenerateToken(jwt.MapClaims{
@@ -58,7 +62,8 @@ func Refresh(ctx *fiber.Ctx) error {
 	}
 
 	if _, err := sessions.InsertOne(context.TODO(), newSession); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		ctx.Status(fiber.StatusInternalServerError)
+		return ctx.JSON(dto.Error{Message: err.Error()})
 	}
 
 	cookie := &fiber.Cookie{
@@ -69,5 +74,5 @@ func Refresh(ctx *fiber.Ctx) error {
 	}
 
 	ctx.Cookie(cookie)
-	return ctx.JSON(TokenPair{newAccessToken, newRefreshToken})
+	return ctx.JSON(dto.TokenPair{AccessToken: newAccessToken, RefreshToken: newRefreshToken})
 }
