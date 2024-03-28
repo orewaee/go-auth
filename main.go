@@ -1,6 +1,7 @@
 package main
 
 import (
+	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -40,6 +41,12 @@ func main() {
 	app.Post("/signin", handlers.SignIn)
 	app.Post("/refresh", handlers.Refresh)
 	app.Get("/activate/:secret", handlers.Activate)
+
+	app.Use(jwtware.New(jwtware.Config{
+		SigningKey: jwtware.SigningKey{Key: []byte(config.AccessSecret)},
+	}))
+
+	app.Get("/user", handlers.User)
 
 	log.Fatalln(app.Listen(":" + config.Port))
 }
